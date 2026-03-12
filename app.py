@@ -116,7 +116,7 @@ while True:
                 height=400,
                 showlegend=False
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="price_chart")
 
         with col2:
             st.subheader("📦 Volume Chart")
@@ -136,7 +136,7 @@ while True:
                 margin=dict(l=10, r=10, t=10, b=10),
                 height=400,
             )
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(fig2, use_container_width=True, key="volume_chart")
 
         st.subheader("🗂️ Recent Trades")
         table_df = df[['last_trade_time', 'last_trade_price',
