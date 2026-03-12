@@ -13,6 +13,12 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main { background-color: #0e1117; }
+    .metric-card {
+        background: #1e2130;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -26,8 +32,13 @@ st.title(f"📈 {symbol} — Live Stock Dashboard")
 @st.cache_data(ttl=1)
 def fetch_data(symbol):
     url = f"https://www.khistocks.com/company/getintra/{symbol}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://www.khistocks.com/",
+    }
     try:
-        res = requests.get(url, timeout=5)
+        res = requests.get(url, headers=headers, timeout=5)
         data = res.json()
         df = pd.DataFrame(data)
         df['last_trade_price'] = pd.to_numeric(df['last_trade_price'])
@@ -40,6 +51,7 @@ def fetch_data(symbol):
         df['net_change'] = pd.to_numeric(df['net_change'])
         return df
     except Exception as e:
+        st.error(f"Error: {e}")
         return None
 
 df = fetch_data(symbol)
@@ -136,6 +148,5 @@ st.dataframe(table_df, use_container_width=True, hide_index=True)
 
 st.caption(f"🔄 Last updated: {latest['last_trade_time']} | Refreshing every {refresh_rate}s")
 
-# ✅ This is the key fix - rerun after delay instead of while loop
 time.sleep(refresh_rate)
 st.rerun()
