@@ -10,7 +10,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Styling ---
 st.markdown("""
 <style>
     .main { background-color: #0e1117; }
@@ -23,7 +22,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar ---
 st.sidebar.title("⚙️ Settings")
 symbol = st.sidebar.text_input("Stock Symbol", value="ATRL").upper()
 refresh_rate = st.sidebar.slider("Refresh every (seconds)", 1, 10, 2)
@@ -31,7 +29,6 @@ chart_type = st.sidebar.selectbox("Chart Type", ["Line", "Candlestick", "Area"])
 
 st.title(f"📈 {symbol} — Live Stock Dashboard")
 
-# --- Fetch Data ---
 @st.cache_data(ttl=1)
 def fetch_data(symbol):
     url = f"https://www.khistocks.com/company/getintra/{symbol}"
@@ -48,10 +45,9 @@ def fetch_data(symbol):
         df['last_day_close_price'] = pd.to_numeric(df['last_day_close_price'])
         df['net_change'] = pd.to_numeric(df['net_change'])
         return df
-    except:
+    except Exception as e:
         return None
 
-# --- Main Loop ---
 placeholder = st.empty()
 
 while True:
@@ -64,11 +60,9 @@ while True:
     latest = df.iloc[0]
     price = latest['last_trade_price']
     change = latest['net_change']
-    change_color = "🟢" if change >= 0 else "🔴"
 
     with placeholder.container():
 
-        # --- Top Metrics Row ---
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         c1.metric("💰 Last Price", f"{price:.2f}")
         c2.metric("📊 Change", f"{change:.2f}", delta=f"{change:.2f}")
@@ -79,7 +73,6 @@ while True:
 
         st.divider()
 
-        # --- Price Chart ---
         col1, col2 = st.columns([2, 1])
 
         with col1:
@@ -94,7 +87,6 @@ while True:
                     line=dict(color='#00d4ff', width=2),
                     name='Price'
                 ))
-
             elif chart_type == "Area":
                 fig.add_trace(go.Scatter(
                     x=df['last_trade_time'],
@@ -104,7 +96,6 @@ while True:
                     line=dict(color='#00d4ff', width=2),
                     name='Price'
                 ))
-
             elif chart_type == "Candlestick":
                 fig.add_trace(go.Candlestick(
                     x=df['last_trade_time'],
@@ -147,27 +138,13 @@ while True:
             )
             st.plotly_chart(fig2, use_container_width=True)
 
-        # --- Trade Table ---
         st.subheader("🗂️ Recent Trades")
         table_df = df[['last_trade_time', 'last_trade_price',
                         'last_trade_volume', 'bid_price',
                         'ask_price', 'total_traded_volume']].head(10)
-        table_df.columns = ['Time', 'Price', 'Volume',
-                             'Bid', 'Ask', 'Total Volume']
+        table_df.columns = ['Time', 'Price', 'Volume', 'Bid', 'Ask', 'Total Volume']
         st.dataframe(table_df, use_container_width=True, hide_index=True)
 
         st.caption(f"🔄 Last updated: {latest['last_trade_time']} | Refreshing every {refresh_rate}s")
 
     time.sleep(refresh_rate)
-```
-
----
-
-## Step 3: Create `requirements.txt`
-
-In GitHub, create another file named `requirements.txt`:
-```
-streamlit
-plotly
-requests
-pandas
