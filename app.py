@@ -13,12 +13,6 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main { background-color: #0e1117; }
-    .metric-card {
-        background: #1e2130;
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -48,103 +42,100 @@ def fetch_data(symbol):
     except Exception as e:
         return None
 
-placeholder = st.empty()
+df = fetch_data(symbol)
 
-while True:
-    df = fetch_data(symbol)
+if df is None:
+    st.error("❌ Failed to fetch data. Check symbol or connection.")
+    st.stop()
 
-    if df is None:
-        st.error("❌ Failed to fetch data. Check symbol or connection.")
-        break
+latest = df.iloc[0]
+price = latest['last_trade_price']
+change = latest['net_change']
 
-    latest = df.iloc[0]
-    price = latest['last_trade_price']
-    change = latest['net_change']
+c1, c2, c3, c4, c5, c6 = st.columns(6)
+c1.metric("💰 Last Price", f"{price:.2f}")
+c2.metric("📊 Change", f"{change:.2f}", delta=f"{change:.2f}")
+c3.metric("🔼 High", f"{latest['high_price']:.2f}")
+c4.metric("🔽 Low", f"{latest['low_price']:.2f}")
+c5.metric("📂 Open", f"{latest['day_open_price']:.2f}")
+c6.metric("📅 Prev Close", f"{latest['last_day_close_price']:.2f}")
 
-    with placeholder.container():
+st.divider()
 
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
-        c1.metric("💰 Last Price", f"{price:.2f}")
-        c2.metric("📊 Change", f"{change:.2f}", delta=f"{change:.2f}")
-        c3.metric("🔼 High", f"{latest['high_price']:.2f}")
-        c4.metric("🔽 Low", f"{latest['low_price']:.2f}")
-        c5.metric("📂 Open", f"{latest['day_open_price']:.2f}")
-        c6.metric("📅 Prev Close", f"{latest['last_day_close_price']:.2f}")
+col1, col2 = st.columns([2, 1])
 
-        st.divider()
+with col1:
+    st.subheader("📉 Price Chart")
+    fig = go.Figure()
 
-        col1, col2 = st.columns([2, 1])
+    if chart_type == "Line":
+        fig.add_trace(go.Scatter(
+            x=df['last_trade_time'],
+            y=df['last_trade_price'],
+            mode='lines',
+            line=dict(color='#00d4ff', width=2),
+            name='Price'
+        ))
+    elif chart_type == "Area":
+        fig.add_trace(go.Scatter(
+            x=df['last_trade_time'],
+            y=df['last_trade_price'],
+            fill='tozeroy',
+            fillcolor='rgba(0,212,255,0.1)',
+            line=dict(color='#00d4ff', width=2),
+            name='Price'
+        ))
+    elif chart_type == "Candlestick":
+        fig.add_trace(go.Candlestick(
+            x=df['last_trade_time'],
+            open=df['day_open_price'],
+            high=df['high_price'],
+            low=df['low_price'],
+            close=df['last_trade_price'],
+            name='OHLC'
+        ))
 
-        with col1:
-            st.subheader("📉 Price Chart")
-            fig = go.Figure()
+    fig.update_layout(
+        paper_bgcolor='#0e1117',
+        plot_bgcolor='#0e1117',
+        font=dict(color='white'),
+        xaxis=dict(showgrid=False, color='white'),
+        yaxis=dict(showgrid=True, gridcolor='#2a2a2a', color='white'),
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=400,
+        showlegend=False
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-            if chart_type == "Line":
-                fig.add_trace(go.Scatter(
-                    x=df['last_trade_time'],
-                    y=df['last_trade_price'],
-                    mode='lines',
-                    line=dict(color='#00d4ff', width=2),
-                    name='Price'
-                ))
-            elif chart_type == "Area":
-                fig.add_trace(go.Scatter(
-                    x=df['last_trade_time'],
-                    y=df['last_trade_price'],
-                    fill='tozeroy',
-                    fillcolor='rgba(0,212,255,0.1)',
-                    line=dict(color='#00d4ff', width=2),
-                    name='Price'
-                ))
-            elif chart_type == "Candlestick":
-                fig.add_trace(go.Candlestick(
-                    x=df['last_trade_time'],
-                    open=df['day_open_price'],
-                    high=df['high_price'],
-                    low=df['low_price'],
-                    close=df['last_trade_price'],
-                    name='OHLC'
-                ))
+with col2:
+    st.subheader("📦 Volume Chart")
+    fig2 = go.Figure()
+    fig2.add_trace(go.Bar(
+        x=df['last_trade_time'],
+        y=df['last_trade_volume'],
+        marker_color='#7b61ff',
+        name='Volume'
+    ))
+    fig2.update_layout(
+        paper_bgcolor='#0e1117',
+        plot_bgcolor='#0e1117',
+        font=dict(color='white'),
+        xaxis=dict(showgrid=False, color='white'),
+        yaxis=dict(showgrid=True, gridcolor='#2a2a2a', color='white'),
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=400,
+    )
+    st.plotly_chart(fig2, use_container_width=True)
 
-            fig.update_layout(
-                paper_bgcolor='#0e1117',
-                plot_bgcolor='#0e1117',
-                font=dict(color='white'),
-                xaxis=dict(showgrid=False, color='white'),
-                yaxis=dict(showgrid=True, gridcolor='#2a2a2a', color='white'),
-                margin=dict(l=10, r=10, t=10, b=10),
-                height=400,
-                showlegend=False
-            )
-            st.plotly_chart(fig, use_container_width=True, key="price_chart")
+st.subheader("🗂️ Recent Trades")
+table_df = df[['last_trade_time', 'last_trade_price',
+                'last_trade_volume', 'bid_price',
+                'ask_price', 'total_traded_volume']].head(10)
+table_df.columns = ['Time', 'Price', 'Volume', 'Bid', 'Ask', 'Total Volume']
+st.dataframe(table_df, use_container_width=True, hide_index=True)
 
-        with col2:
-            st.subheader("📦 Volume Chart")
-            fig2 = go.Figure()
-            fig2.add_trace(go.Bar(
-                x=df['last_trade_time'],
-                y=df['last_trade_volume'],
-                marker_color='#7b61ff',
-                name='Volume'
-            ))
-            fig2.update_layout(
-                paper_bgcolor='#0e1117',
-                plot_bgcolor='#0e1117',
-                font=dict(color='white'),
-                xaxis=dict(showgrid=False, color='white'),
-                yaxis=dict(showgrid=True, gridcolor='#2a2a2a', color='white'),
-                margin=dict(l=10, r=10, t=10, b=10),
-                height=400,
-            )
-            st.plotly_chart(fig2, use_container_width=True, key="volume_chart")
+st.caption(f"🔄 Last updated: {latest['last_trade_time']} | Refreshing every {refresh_rate}s")
 
-        st.subheader("🗂️ Recent Trades")
-        table_df = df[['last_trade_time', 'last_trade_price',
-                        'last_trade_volume', 'bid_price',
-                        'ask_price', 'total_traded_volume']].head(10)
-        table_df.columns = ['Time', 'Price', 'Volume', 'Bid', 'Ask', 'Total Volume']
-        st.dataframe(table_df, use_container_width=True, hide_index=True)
-
-        st.caption(f"🔄 Last updated: {latest['last_trade_time']} | Refreshing every {refresh_rate}s")
-
-    time.sleep(refresh_rate)
+# ✅ This is the key fix - rerun after delay instead of while loop
+time.sleep(refresh_rate)
+st.rerun()
